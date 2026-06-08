@@ -63,9 +63,9 @@ jobs:
       - name: Upload dist to R2
         if: github.ref == 'refs/heads/main'
         run: |
-          rclone copy dist r2:nostaligafun-files/games/games-accualy/APPS/NoClipWebsite_Data \
+          rclone copy ./dist r2:nostaligafun-files/games/games-accualy/APPS/NoClipWebsite_Data \
             --s3-no-check-bucket \
-            --fast-list \
-            --transfers 32 \
-            --checkers 32 \
-            --progress
+            --progress \
+            --stats 30s \
+            --retries 999 \
+            --low-level-retries 999

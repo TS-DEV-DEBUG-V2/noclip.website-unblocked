@@ -64,6 +64,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           rclone sync dist r2:nostaligafun-files/games/games-accualy/APPS/NoClipWebsite_Data \
+            --s3-no-check-bucket \
             --fast-list \
             --transfers 32 \
             --checkers 32 \

@@ -1,0 +1,70 @@
+name: Build and Upload to R2
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+
+      - name: Cache Rust workspace
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-directories: rust/.bin
+          workspaces: rust
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Set up Rust
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cd rust
+          cargo install cargo-run-bin
+          cargo bin --install
+
+      - name: Enable Rust logging
+        run: echo "RUST_LOG=info" >> $GITHUB_ENV
+
+      - name: Run build
+        run: pnpm run build
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: rclone config
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY }}
+          secret_access_key = ${{ secrets.R2_SECRET_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Upload dist to R2
+        if: github.ref == 'refs/heads/main'
+        run: |
+          rclone sync dist r2:nostaligafun-files/games/games-accualy/APPS/NoClipWebsite_Data \
+            --fast-list \
+            --transfers 32 \
+            --checkers 32 \
+            --progress
